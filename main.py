@@ -15,7 +15,7 @@ from fastapi import Request
 from fastapi import Query
 from fastapi.responses import JSONResponse
 from ocpp.v16.call import Authorize as AuthorizeRequest
-from ocpp.v16.call_result import AuthorizeConf as AuthorizePayload
+from ocpp_custom.v16.call import Authorize
 import uvicorn
 from threading import Thread
 from websockets.server import serve
