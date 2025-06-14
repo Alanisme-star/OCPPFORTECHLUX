@@ -3,6 +3,6 @@ uvicorn
 websockets
 requests
 python-dotenv
-ocpp==0.12.1
+git+https://github.com/mobilityhouse/ocpp.git@v0.12.1
 werkzeug
 aiofiles
