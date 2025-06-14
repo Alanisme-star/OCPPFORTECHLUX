@@ -5,4 +5,4 @@ requests
 python-dotenv
 aiofiles
 werkzeug
-https://github.com/mobilityhouse/ocpp/archive/refs/tags/v0.12.1.zip
+https://github.com/mobilityhouse/ocpp/archive/refs/tags/0.12.1.zip
