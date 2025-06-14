@@ -1,0 +1,9 @@
+# 忽略虛擬環境
+venv/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# VSCode 等 IDE 設定
+.vscode/
