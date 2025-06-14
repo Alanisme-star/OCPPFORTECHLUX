@@ -7,3 +7,7 @@ __pycache__/
 
 # VSCode 等 IDE 設定
 .vscode/
+
+# 忽略錯誤的套件副本
+ocpp/
+!ocpp_data.db
