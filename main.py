@@ -12,13 +12,14 @@ from datetime import datetime, timezone
 from fastapi import Request
 from fastapi import Query
 from fastapi.responses import JSONResponse
+from ocpp.v16.call_result import Authorize as AuthorizePayload  ✅正確寫法
 import uvicorn
 from threading import Thread
 from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
 from ocpp.v16 import call, ChargePoint as BaseChargePoint
 from ocpp.v16.enums import Action, RegistrationStatus
-from ocpp.v16 import call_result
+from ocpp_custom.v16.call_result import BootNotification
 from ocpp_custom.v16.call import Authorize
 from werkzeug.security import generate_password_hash, check_password_hash
 from fastapi import Body, Path
