@@ -1,6 +1,8 @@
 fastapi
 uvicorn
-websockets==10.1
-python-dotenv
+websockets
 requests
+python-dotenv
+ocpp==0.12.1
+werkzeug
 aiofiles
