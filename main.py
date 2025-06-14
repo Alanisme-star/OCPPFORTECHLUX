@@ -20,7 +20,7 @@ from ocpp.routing import on
 from ocpp.v16 import call, ChargePoint as BaseChargePoint
 from ocpp.v16.enums import Action, RegistrationStatus
 from ocpp.v16 import call_result
-from ocpp.v16.call_result import Authorize as AuthorizePayload
+from ocpp.v16.call import Authorize
 from werkzeug.security import generate_password_hash, check_password_hash
 from fastapi import Body, Path
 from fastapi import FastAPI
