@@ -3,6 +3,6 @@ uvicorn
 websockets
 requests
 python-dotenv
-git+https://github.com/mobilityhouse/ocpp.git@v0.12.1
-werkzeug
 aiofiles
+werkzeug
+https://github.com/mobilityhouse/ocpp/archive/refs/tags/v0.12.1.zip
