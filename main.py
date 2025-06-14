@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from fastapi import Request
 from fastapi import Query
 from fastapi.responses import JSONResponse
-from ocpp.v16.call_result import Authorize as AuthorizePayload  # 正確寫法
+from ocpp.v16.call import Authorize as AuthorizeRequest
+from ocpp.v16.call_result import AuthorizeConf as AuthorizePayload
 import uvicorn
 from threading import Thread
 from websockets.server import serve
