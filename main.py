@@ -16,7 +16,6 @@ import uvicorn
 from threading import Thread
 from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
-from ocpp.routing import on
 from ocpp.v16 import call, ChargePoint as BaseChargePoint
 from ocpp.v16.enums import Action, RegistrationStatus
 from ocpp.v16 import call_result
