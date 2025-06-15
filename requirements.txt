@@ -1,8 +1,6 @@
 fastapi
 uvicorn
 websockets
-requests
 werkzeug
-python-multipart
 reportlab
 ocpp==0.13.1

@@ -1,45 +1,25 @@
 import sys
 sys.path.insert(0, "./")
-import sqlite3
-import json
-import os
-# ❌ 不需要載入 .env
-# from dotenv import load_dotenv
-# load_dotenv()
-import uuid
-import asyncio
-import logging
-from datetime import datetime
+
+import sqlite3, json, os, uuid, asyncio, logging
 from datetime import datetime, timezone
-from fastapi import Request
-from fastapi import Query
+from fastapi import FastAPI, Request, Query, Body, Path
 from fastapi.responses import JSONResponse
-from ocpp.v16.call import Authorize as AuthorizeRequest
-from ocpp_custom.v16.call import Authorize
-from ocpp.v16 import call
-from ocpp.v16 import ChargePoint
-from ocpp.v16 import call, ChargePoint as BaseChargePoint
-from ocpp.v16.enums import Action, RegistrationStatus
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from threading import Thread
 from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
-from ocpp_custom.v16.call_result import BootNotification
-from ocpp_custom.v16.call import Authorize
 from werkzeug.security import generate_password_hash, check_password_hash
-from fastapi import Body, Path
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from ocpp.v16.call_result import (
-    BootNotification,
-    Heartbeat,
-    MeterValues,
-    StartTransaction,
-    StopTransaction,
-    StatusNotification  # ✅ 正確放在這裡
-)
 
+# ✅ 官方匯入方式，適用於 ocpp 0.13.x：
+from ocpp.v16.messages import AuthorizePayload, BootNotificationPayload
+from ocpp.v16.call_result import Heartbeat, MeterValues, StartTransaction, StopTransaction, StatusNotification
+from ocpp.v16 import ChargePoint, call
+from ocpp.v16.enums import Action, RegistrationStatus
 
+# 建立 FastAPI app ...
+app = FastAPI()
+...
 
 # 啟用 logging
 logging.basicConfig(level=logging.INFO)
