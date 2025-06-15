@@ -1,7 +1,8 @@
 fastapi
 uvicorn
 websockets
-requests
-python-dotenv
-aiofiles
 werkzeug
+python-multipart
+requests
+reportlab
+git+https://github.com/mobilityhouse/ocpp.git@master
