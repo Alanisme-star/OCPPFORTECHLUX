@@ -11,10 +11,10 @@ from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# ✅ 官方匯入方式，適用於 ocpp 0.13.x：
-from ocpp.v16.messages import AuthorizePayload, BootNotificationPayload
-from ocpp.v16.call_result import Heartbeat, MeterValues, StartTransaction, StopTransaction, StatusNotification
+# ✅ 正確的 OCPP 導入
 from ocpp.v16 import ChargePoint, call
+from ocpp.v16.call import Call, CallResult
+from ocpp.v16 import call_result
 from ocpp.v16.enums import Action, RegistrationStatus
 
 # 建立 FastAPI app ...
