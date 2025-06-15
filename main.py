@@ -11,7 +11,7 @@ from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# 正確載入方式：使用 call_result Payload 類別
+# ✅ 正確匯入 call_result payloads
 from ocpp.v16.call_result import (
     BootNotificationPayload,
     HeartbeatPayload,
@@ -19,10 +19,24 @@ from ocpp.v16.call_result import (
     StartTransactionPayload,
     StopTransactionPayload,
     MeterValuesPayload,
-    StatusNotificationPayload
+    StatusNotificationPayload,
 )
+
 from ocpp.v16 import ChargePoint, call
 from ocpp.v16.enums import Action, RegistrationStatus
+
+# 建立 FastAPI app ...
+app = FastAPI()
+# ... (其他設定) ...
+
+# ✅ 使用正確的 ChargePoint 繼承
+class MyChargePoint(ChargePoint):
+    async def on_boot_notification(self, payload: BootNotificationPayload, **kwargs):
+        return call_result.BootNotificationPayload(
+            current_time=datetime.now(timezone.utc).isoformat(),
+            interval=10,
+            status=RegistrationStatus.accepted
+        )
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
