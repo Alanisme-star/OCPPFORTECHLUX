@@ -11,12 +11,18 @@ from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from ocpp.v16 import ChargePoint
-from ocpp.v16 import call, call_result
+# 正確入口 ─ use call_result payloads and call.RemoteXxxPayload
+from ocpp.v16.call_result import (
+    BootNotificationPayload,
+    HeartbeatPayload,
+    AuthorizePayload,
+    StartTransactionPayload,
+    StopTransactionPayload,
+    MeterValuesPayload,
+    StatusNotificationPayload
+)
+from ocpp.v16 import ChargePoint, call
 from ocpp.v16.enums import Action, RegistrationStatus
-
-# 如果需要 message payloads
-from ocpp.v16.messages import AuthorizePayload, BootNotificationPayload
 
 # 建立 FastAPI app ...
 app = FastAPI()
