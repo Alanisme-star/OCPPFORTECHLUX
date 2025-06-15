@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 websockets
+requests
 werkzeug
 python-multipart
-requests
 reportlab
-git+https://github.com/mobilityhouse/ocpp.git@master
+ocpp==0.13.1
