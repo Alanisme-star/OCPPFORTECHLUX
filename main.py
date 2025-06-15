@@ -11,11 +11,12 @@ from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# ✅ 正確的 OCPP 導入
-from ocpp.v16 import ChargePoint, call
-from ocpp.v16.call import Call, CallResult
-from ocpp.v16 import call_result
+from ocpp.v16 import ChargePoint
+from ocpp.v16 import call, call_result
 from ocpp.v16.enums import Action, RegistrationStatus
+
+# 如果需要 message payloads
+from ocpp.v16.messages import AuthorizePayload, BootNotificationPayload
 
 # 建立 FastAPI app ...
 app = FastAPI()
