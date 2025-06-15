@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-websockets
 werkzeug
+websockets
 reportlab
 ocpp==0.13.1
