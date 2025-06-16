@@ -76,23 +76,6 @@ conn = sqlite3.connect(DB_FILE, check_same_thread=False)
 cursor = conn.cursor()
 
 
-# 建立 weekly_pricing 資料表（如果尚未存在）
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS weekly_pricing (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    day_of_week TEXT NOT NULL,
-    time_start TEXT NOT NULL,
-    time_end TEXT NOT NULL,
-    price REAL NOT NULL,
-    season TEXT NOT NULL
-)
-""")
-conn.commit()
-
-
-
-
-
 # === 新增 cards 資料表，用於管理卡片餘額 ===
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS cards (
@@ -1769,67 +1752,6 @@ async def duplicate_pricing(data: dict = Body(...)):
     return {"message": f"已複製 {len(rows)} 筆設定至 {len(target_dates)} 天"}
 
 
-
-# 新增：週期性電價 weekly_pricing_rules API 與資料表
-from fastapi import Body, Path
-
-# 建立資料表
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS weekly_pricing_rules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    season TEXT,             -- summer / non_summer
-    weekday TEXT,            -- Monday ~ Sunday
-    type TEXT,               -- peak / mid / off
-    start_time TEXT,         -- HH:MM
-    end_time TEXT,           -- HH:MM
-    price REAL
-)
-''')
-conn.commit()
-
-# 取得所有設定（可選季節過濾）
-@app.get("/api/weekly-pricing")
-async def get_weekly_pricing(season: str = None):
-    if season:
-        cursor.execute("SELECT id, season, weekday, type, start_time, end_time, price FROM weekly_pricing_rules WHERE season=?", (season,))
-    else:
-        cursor.execute("SELECT id, season, weekday, type, start_time, end_time, price FROM weekly_pricing_rules")
-    rows = cursor.fetchall()
-    return [
-        {
-            "id": r[0], "season": r[1], "weekday": r[2], "type": r[3],
-            "startTime": r[4], "endTime": r[5], "price": r[6]
-        } for r in rows
-    ]
-
-# 新增單一設定
-@app.post("/api/weekly-pricing")
-async def add_weekly_pricing(data: dict = Body(...)):
-    cursor.execute('''
-        INSERT INTO weekly_pricing_rules (season, weekday, type, start_time, end_time, price)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (data["season"], data["weekday"], data["type"], data["startTime"], data["endTime"], float(data["price"])))
-    conn.commit()
-    return {"message": "新增成功"}
-
-# 修改指定設定
-@app.put("/api/weekly-pricing/{id}")
-async def update_weekly_pricing(id: int = Path(...), data: dict = Body(...)):
-    cursor.execute('''
-        UPDATE weekly_pricing_rules
-        SET season=?, weekday=?, type=?, start_time=?, end_time=?, price=?
-        WHERE id=?
-    ''', (data["season"], data["weekday"], data["type"], data["startTime"], data["endTime"], float(data["price"]), id))
-    conn.commit()
-    return {"message": "更新成功"}
-
-# 刪除指定設定
-@app.delete("/api/weekly-pricing/{id}")
-async def delete_weekly_pricing(id: int = Path(...)):
-    cursor.execute("DELETE FROM weekly_pricing_rules WHERE id = ?", (id,))
-    conn.commit()
-    return {"message": "已刪除"}
-
 @app.get("/")
 async def root():
     return {"status": "API is running"}
@@ -1837,63 +1759,58 @@ async def root():
 
 from fastapi import HTTPException
 
-# 查詢全部或指定季節的電價
+from fastapi import Query
+
+# 取得
 @app.get("/api/weekly-pricing")
-def get_weekly_pricing(season: str = None):
-    if season:
-        cursor.execute("SELECT * FROM weekly_pricing WHERE season = ?", (season,))
-    else:
-        cursor.execute("SELECT * FROM weekly_pricing")
+async def get_weekly_pricing(season: str = Query(...)):
+    cursor.execute('''
+        SELECT id, season, weekday, type, start_time, end_time, price
+        FROM weekly_pricing
+        WHERE season = ?
+        ORDER BY weekday, start_time
+    ''', (season,))
     rows = cursor.fetchall()
-    return [dict(zip(["id", "day_of_week", "time_start", "time_end", "price", "season"], row)) for row in rows]
+    return [
+        {
+            "id": r[0], "season": r[1], "weekday": r[2],
+            "type": r[3], "startTime": r[4], "endTime": r[5], "price": r[6]
+        } for r in rows
+    ]
 
-# 新增一筆電價資料
+# 新增
 @app.post("/api/weekly-pricing")
-def create_weekly_pricing(data: dict = Body(...)):
-    required = ["day_of_week", "time_start", "time_end", "price", "season"]
-    if not all(k in data for k in required):
-        raise HTTPException(status_code=400, detail="Missing required fields")
-    cursor.execute("""
-        INSERT INTO weekly_pricing (day_of_week, time_start, time_end, price, season)
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        data["day_of_week"],
-        data["time_start"],
-        data["time_end"],
-        data["price"],
-        data["season"]
+async def add_weekly_pricing(data: dict = Body(...)):
+    cursor.execute('''
+        INSERT INTO weekly_pricing (season, weekday, type, start_time, end_time, price)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        data["season"], data["weekday"], data["type"],
+        data["startTime"], data["endTime"], float(data["price"])
     ))
     conn.commit()
-    return {"status": "success"}
+    return {"message": "新增成功"}
 
-# 修改指定電價資料
-@app.put("/api/weekly-pricing/{entry_id}")
-def update_weekly_pricing(entry_id: int, data: dict = Body(...)):
-    cursor.execute("SELECT * FROM weekly_pricing WHERE id = ?", (entry_id,))
-    if not cursor.fetchone():
-        raise HTTPException(status_code=404, detail="Entry not found")
-    cursor.execute("""
+# 更新
+@app.put("/api/weekly-pricing/{id}")
+async def update_weekly_pricing(id: int = Path(...), data: dict = Body(...)):
+    cursor.execute('''
         UPDATE weekly_pricing
-        SET day_of_week = ?, time_start = ?, time_end = ?, price = ?, season = ?
+        SET season = ?, weekday = ?, type = ?, start_time = ?, end_time = ?, price = ?
         WHERE id = ?
-    """, (
-        data["day_of_week"],
-        data["time_start"],
-        data["time_end"],
-        data["price"],
-        data["season"],
-        entry_id
+    ''', (
+        data["season"], data["weekday"], data["type"],
+        data["startTime"], data["endTime"], float(data["price"]), id
     ))
     conn.commit()
-    return {"status": "updated"}
+    return {"message": "更新成功"}
 
-# 刪除指定電價資料
-@app.delete("/api/weekly-pricing/{entry_id}")
-def delete_weekly_pricing(entry_id: int):
-    cursor.execute("DELETE FROM weekly_pricing WHERE id = ?", (entry_id,))
+# 刪除
+@app.delete("/api/weekly-pricing/{id}")
+async def delete_weekly_pricing(id: int = Path(...)):
+    cursor.execute('DELETE FROM weekly_pricing WHERE id = ?', (id,))
     conn.commit()
-    return {"status": "deleted"}
-
+    return {"message": "刪除成功"}
 
 
 
