@@ -1811,3 +1811,7 @@ async def delete_weekly_pricing(id: int = Path(...)):
     cursor.execute("DELETE FROM weekly_pricing_rules WHERE id = ?", (id,))
     conn.commit()
     return {"message": "已刪除"}
+
+@app.get("/")
+async def root():
+    return {"status": "API is running"}
