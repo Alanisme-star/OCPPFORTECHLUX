@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: isDev
             ? 'http://localhost:8000'
-            : 'https://https://ocppfortechlux.onrender.com',
+            : 'https://ocppfortechlux.onrender.com',
           changeOrigin: true,
           secure: false,
         },

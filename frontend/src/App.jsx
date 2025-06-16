@@ -1,6 +1,10 @@
 // frontend/src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import axios from "axios"; // ⬅️ 加這行
+
+// 設定 axios baseURL（連接你的後端 API）
+axios.defaults.baseURL = "https://ocppfortechlux.onrender.com/api"; // ⬅️ 這行很重要
 
 // Layout
 import Sidebar from "./components/Sidebar";
