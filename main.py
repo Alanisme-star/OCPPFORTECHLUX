@@ -1,42 +1,65 @@
 import sys
 sys.path.insert(0, "./")
 
-import sqlite3, json, os, uuid, asyncio, logging
+import os
+import uuid
+import asyncio
+import logging
+import sqlite3
 from datetime import datetime, timezone
-from fastapi import FastAPI, Request, Query, Body, Path
-from fastapi.responses import JSONResponse
+
+from fastapi import FastAPI, Request, Query, Body, Path, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+
 import uvicorn
 from websockets.server import serve
 from websockets.exceptions import ConnectionClosedOK
+
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# ✅ 正確匯入 call_result payloads
+from ocpp.v16 import call
 from ocpp.v16.call_result import (
     BootNotificationPayload,
     HeartbeatPayload,
-    AuthorizePayload,
+    MeterValuesPayload,
     StartTransactionPayload,
     StopTransactionPayload,
-    MeterValuesPayload,
-    StatusNotificationPayload,
+    StatusNotificationPayload
+)
+from ocpp.v16.enums import Action, RegistrationStatus
+from ocpp.routing import on
+from threading import Thread
+
+
+
+# 建立 FastAPI app
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], allow_credentials=True,
+    allow_methods=["*"], allow_headers=["*"],
 )
 
-from ocpp.v16 import ChargePoint, call
-from ocpp.v16.enums import Action, RegistrationStatus
+# 初始化狀態儲存
+charging_point_status = {}
 
-# 建立 FastAPI app ...
-app = FastAPI()
-# ... (其他設定) ...
+logging.basicConfig(level=logging.INFO)
 
-# ✅ 使用正確的 ChargePoint 繼承
-class MyChargePoint(ChargePoint):
-    async def on_boot_notification(self, payload: BootNotificationPayload, **kwargs):
-        return call_result.BootNotificationPayload(
-            current_time=datetime.now(timezone.utc).isoformat(),
-            interval=10,
-            status=RegistrationStatus.accepted
-        )
+# HTTP 端點：查詢狀態
+@app.get("/status/{cp_id}")
+async def get_status(cp_id: str):
+    return JSONResponse(charging_point_status.get(cp_id, {}))
+
+# 假設的授權 API
+@app.post("/authorize/{cp_id}")
+async def authorize(cp_id: str, badge_id: str = Body(..., embed=True)):
+    # 查 DB，回傳 AuthorizePayload
+    loop = asyncio.get_event_loop()
+    return {"idTagInfo": {"status": "Accepted"}}
+
+# 以下開始 WebSocket 與 OCPP 部分
+
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
@@ -205,25 +228,27 @@ app.add_middleware(
 )
 
 
-class ChargePoint(BaseChargePoint):
+from ocpp.v16 import ChargePoint as OcppChargePoint
 
-    @on(Action.boot_notification)
+class ChargePoint(OcppChargePoint):
+
+    @on(Action.BootNotification)
     async def on_boot_notification(self, charge_point_model, charge_point_vendor, **kwargs):
         now = datetime.utcnow().replace(tzinfo=timezone.utc)
         logging.info(f"🔌 BootNotification | 模型={charge_point_model} | 廠商={charge_point_vendor}")
-        return BootNotification(
+        return BootNotificationPayload(
             current_time=now.isoformat(),
             interval=10,
             status="Accepted"
         )
 
-    @on(Action.heartbeat)
+    @on(Action.Heartbeat)
     async def on_heartbeat(self):
         now = datetime.utcnow().replace(tzinfo=timezone.utc)
         logging.info(f"❤️ Heartbeat | CP={self.id}")
-        return Heartbeat(current_time=now.isoformat())
+        return HeartbeatPayload(current_time=now.isoformat())
 
-    @on(Action.authorize)
+    @on(Action.Authorize)
     async def on_authorize(self, id_tag, **kwargs):
         cursor.execute("SELECT status, valid_until FROM id_tags WHERE id_tag = ?", (id_tag,))
         row = cursor.fetchone()
@@ -233,7 +258,6 @@ class ChargePoint(BaseChargePoint):
             status_db, valid_until = row
             try:
                 valid_until_dt = datetime.fromisoformat(valid_until).replace(tzinfo=timezone.utc)
-
             except ValueError:
                 logging.warning(f"⚠️ 無法解析 valid_until 格式：{valid_until}")
                 valid_until_dt = datetime.min.replace(tzinfo=timezone.utc)
@@ -241,9 +265,9 @@ class ChargePoint(BaseChargePoint):
             logging.info(f"🔎 驗證有效期限valid_until={valid_until_dt.isoformat()} / now={now.isoformat()}")
             status = "Accepted" if status_db == "Accepted" and valid_until_dt > now else "Expired"
         logging.info(f"🆔 Authorize | idTag: {id_tag} | 查詢結果: {status}")
-        return AuthorizePayload(id_tag_info={"status": status})
+        return call.AuthorizePayload(id_tag_info={"status": status})
 
-    @on(Action.start_transaction)
+    @on(Action.StartTransaction)
     async def on_start_transaction(self, connector_id, id_tag, meter_start, timestamp, **kwargs):
         cursor.execute("SELECT status, valid_until FROM id_tags WHERE id_tag = ?", (id_tag,))
         row = cursor.fetchone()
@@ -317,12 +341,12 @@ class ChargePoint(BaseChargePoint):
         ))
         conn.commit()
         logging.info(f"🚗 StartTransaction 成功 | CP={self.id} | idTag={id_tag} | transactionId={transaction_id}")
-        return StartTransaction(
+        return StartTransactionPayload(
             transaction_id=transaction_id,
             id_tag_info={"status": "Accepted"}
         )
 
-    @on(Action.meter_values)
+    @on(Action.MeterValues)
     async def on_meter_values(self, connector_id, meter_value, **kwargs):
         for entry in meter_value:
             timestamp = entry.get("timestamp")
@@ -338,13 +362,10 @@ class ChargePoint(BaseChargePoint):
                 ))
         conn.commit()
         logging.info(f"📈 MeterValues | CP={self.id} | 筆數={len(meter_value)}")
-        return MeterValues()
+        return MeterValuesPayload()
 
-    ...
 
-    ...
-
-    @on(Action.stop_transaction)
+    @on(Action.StopTransaction)
     async def on_stop_transaction(self, transaction_id, meter_stop, timestamp, id_tag, reason, **kwargs):
         # 更新交易紀錄
         cursor.execute('''
@@ -428,7 +449,7 @@ class ChargePoint(BaseChargePoint):
                     logging.warning(f"LINE 通知失敗：{e}")
 
         logging.info(f"🛑 StopTransaction 成功 | CP={self.id} | idTag={id_tag} | transactionId={transaction_id}")
-        return StopTransaction(id_tag_info={"status": "Accepted"})
+        return StopTransactionPayload(id_tag_info={"status": "Accepted"})
 
 
 # 建立扣款紀錄表
@@ -499,7 +520,7 @@ async def list_payments():
 
 ...
 
-@on(Action.status_notification)
+@on(Action.StatusNotification)
 async def on_status_notification(self, connector_id, status, timestamp, **kwargs):
     cursor.execute('''
         INSERT INTO status_logs (charge_point_id, connector_id, status, timestamp)
@@ -507,7 +528,7 @@ async def on_status_notification(self, connector_id, status, timestamp, **kwargs
     ''', (self.id, connector_id, status, timestamp))
     conn.commit()
     logging.info(f"📡 StatusNotification | CP={self.id} | connector={connector_id} | status={status}")
-    return StatusNotification()
+    return StatusNotificationPayload()
 
 
 
