@@ -1811,11 +1811,3 @@ async def delete_weekly_pricing(id: int = Path(...)):
     cursor.execute("DELETE FROM weekly_pricing_rules WHERE id = ?", (id,))
     conn.commit()
     return {"message": "已刪除"}
-
-
-
-
-# 執行主程式（如果直接啟動）
-if __name__ == "__main__":
-    print("🚀 FastAPI 伺服器啟動中")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
