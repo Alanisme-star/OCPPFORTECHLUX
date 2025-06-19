@@ -1,5 +1,6 @@
-fastapi
-uvicorn
-websockets
-requests
-ocpp==0.12.1  # 如果你同時使用官方模組的其他部分
+__pycache__/
+*.pyc
+*.pyo
+*.db
+venv/
+.env
