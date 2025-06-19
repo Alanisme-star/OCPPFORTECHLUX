@@ -133,57 +133,18 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 
-# === 新增：時間電價與費用設定 ===
-
-# 建立 pricing_rules 表：記錄不同時段電價（依台電夏季/非夏季、平日/假日）
 cursor.execute('''
-CREATE TABLE IF NOT EXISTS pricing_rules (
+CREATE TABLE IF NOT EXISTS weekly_pricing (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    season TEXT,         -- 'summer' or 'non_summer'
-    day_type TEXT,       -- 'weekday' or 'holiday'
-    start_time TEXT,     -- e.g. '09:00'
-    end_time TEXT,       -- e.g. '24:00'
+    season TEXT,
+    weekday TEXT,
+    type TEXT,          -- 尖峰、離峰、半尖峰
+    start_time TEXT,    -- HH:MM
+    end_time TEXT,      -- HH:MM
     price REAL
 )
 ''')
-
-# 建立 base_rates 表：每月基本費與超量用電加價
-cursor.execute('DROP TABLE IF EXISTS base_rates')
-cursor.execute('''
-CREATE TABLE base_rates (
-    id INTEGER PRIMARY KEY,
-    monthly_basic_fee REAL,
-    threshold_kwh INTEGER,
-    overuse_price_delta REAL
-)
-''')
-
-# 插入台電二段式電價資料（簡化版）
-cursor.execute("DELETE FROM pricing_rules")
-cursor.executemany('''
-INSERT INTO pricing_rules (season, day_type, start_time, end_time, price)
-VALUES (?, ?, ?, ?, ?)
-''', [
-    ("summer", "weekday", "00:00", "09:00", 1.96),
-    ("summer", "weekday", "09:00", "24:00", 5.01),
-    ("summer", "holiday", "00:00", "24:00", 1.96),
-    ("non_summer", "weekday", "00:00", "06:00", 1.89),
-    ("non_summer", "weekday", "06:00", "11:00", 4.78),
-    ("non_summer", "weekday", "11:00", "14:00", 1.89),
-    ("non_summer", "weekday", "14:00", "24:00", 4.78),
-    ("non_summer", "holiday", "00:00", "24:00", 1.89),
-])
-
-# 插入基本費與加價規則（全年適用）
-cursor.execute("DELETE FROM base_rates")
-cursor.execute('''
-INSERT INTO base_rates (id, monthly_basic_fee, threshold_kwh, overuse_price_delta)
-VALUES (1, 75.0, 2000, 1.02)
-''')
-
 conn.commit()
-
-
 
 
 # ⚠️ 請注意：這會清空原本 meter_values 資料
